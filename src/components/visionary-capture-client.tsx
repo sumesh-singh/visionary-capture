@@ -5,9 +5,9 @@ import { toPng } from 'html-to-image';
 import Editor from 'react-simple-code-editor';
 import { highlight, languages } from 'prismjs/components/prism-core';
 import 'prismjs/components/prism-clike';
+import 'prismjs/components/prism-markup';
 import 'prismjs/components/prism-javascript';
 import 'prismjs/components/prism-typescript';
-import 'prismjs/components/prism-markup';
 import 'prismjs/components/prism-jsx';
 import 'prismjs/components/prism-tsx';
 import 'prismjs/components/prism-markup-templating';
@@ -25,9 +25,8 @@ import 'prismjs/components/prism-sql';
 import 'prismjs/components/prism-yaml';
 
 import { useToast } from '@/hooks/use-toast';
-import { explainCode } from '@/ai/flows/explain-code';
 import { cn } from '@/lib/utils';
-import { Brush, Code, Download, Loader2, Settings, Sparkles } from "lucide-react";
+import { Brush, Download, Loader2, Settings } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -198,30 +197,6 @@ function ControlPanel({ state, setters, handlers }: ControlPanelProps) {
                 </div>
             </AccordionContent>
           </AccordionItem>
-          
-          <AccordionItem value="ai">
-            <AccordionTrigger className="px-4 text-base">
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4" /> AI Tools
-              </div>
-            </AccordionTrigger>
-            <AccordionContent className="px-4 pt-2 space-y-4">
-                <p className="text-sm text-muted-foreground">Generate an explanation of your code to better understand its functionality.</p>
-                <Button onClick={handlers.handleExplainCode} variant="outline" className="w-full" disabled={state.isExplaining}>
-                    {state.isExplaining ? <Loader2 className="animate-spin" /> : <Code className="mr-2" />}
-                    Explain Code
-                </Button>
-                {(state.isExplaining || state.explanation) && (
-                    <div className="border rounded-md p-3 max-h-48 overflow-y-auto bg-background/50">
-                        {state.isExplaining && !state.explanation && <p className="text-sm text-muted-foreground">Generating explanation...</p>}
-                        {state.explanation && <div
-                            className="explanation-content max-w-none text-sm"
-                            dangerouslySetInnerHTML={{ __html: state.explanation }}
-                        />}
-                    </div>
-                )}
-            </AccordionContent>
-          </AccordionItem>
         </Accordion>
       </div>
 
@@ -342,8 +317,6 @@ export default function VisionaryCaptureClient() {
   const [background, setBackground] = useState(backgrounds[0].value);
   const [showLineNumbers, setShowLineNumbers] = useState(true);
   const [watermark, setWatermark] = useState('Visionary Capture');
-  const [explanation, setExplanation] = useState('');
-  const [isExplaining, setIsExplaining] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
 
   const { toast } = useToast();
@@ -377,27 +350,9 @@ export default function VisionaryCaptureClient() {
       .finally(() => setIsDownloading(false));
   }, [editorRef, toast]);
 
-  const handleExplainCode = async () => {
-    setIsExplaining(true);
-    setExplanation('');
-    try {
-      const result = await explainCode({ code, language });
-      setExplanation(result.explanation);
-    } catch (error) {
-      console.error("Code explanation failed:", error);
-      toast({
-        variant: "destructive",
-        title: "Explanation Failed",
-        description: "Could not generate an explanation for the code.",
-      });
-    } finally {
-      setIsExplaining(false);
-    }
-  };
-
-  const state = { code, language, padding, windowTheme, background, showLineNumbers, watermark, explanation, isExplaining, isDownloading };
+  const state = { code, language, padding, windowTheme, background, showLineNumbers, watermark, isDownloading };
   const setters = { setCode, setLanguage, setPadding, setWindowTheme, setBackground, setShowLineNumbers, setWatermark };
-  const handlers = { handleDownload, handleExplainCode };
+  const handlers = { handleDownload };
 
   return (
     <div className="min-h-screen w-full flex flex-col md:flex-row bg-background text-foreground font-sans">
