@@ -1,112 +1,178 @@
 "use client";
 
-import { useState } from 'react';
-import { SidebarProvider, SidebarInset } from './ui/sidebar';
-import AppSidebar from './app-sidebar';
-import FileManager from './file-manager';
-import EditorPanel from './editor-panel';
-import { fileToDataUri } from '@/lib/utils';
-import { useToast } from '@/hooks/use-toast';
+import { useState, useRef, useCallback } from 'react';
+import { toPng } from 'html-to-image';
+import Editor from 'react-simple-code-editor';
+import { highlight, languages } from 'prismjs/components/prism-core';
+import 'prismjs/components/prism-clike';
+import 'prismjs/components/prism-javascript';
+import 'prismjs/components/prism-typescript';
+import 'prismjs/components/prism-jsx';
+import 'prismjs/components/prism-tsx';
+import 'prismjs/components/prism-css';
+import 'prismjs/components/prism-json';
+import 'prismjs/components/prism-bash';
+import 'prismjs/components/prism-markdown';
 
-export interface Capture {
-  id: string;
-  name: string;
-  src: string;
-  type: 'image' | 'video';
-  tags: string[];
-  file?: File; // Store the original file for later use
-}
+import { cn } from '@/lib/utils';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Download, Moon, Sun } from 'lucide-react';
+import { Slider } from '@/components/ui/slider';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
-const initialCaptures: Capture[] = [
-  { id: '1', name: 'Dashboard_Analytics.png', src: 'https://placehold.co/1280x720.png', type: 'image', tags: ['dashboard', 'analytics'] },
-  { id: '2', name: 'User_Profile_UI.png', src: 'https://placehold.co/800x600.png', type: 'image', tags: ['ui', 'profile'] },
-  { id: '3', name: 'Code_Snippet_React.png', src: 'https://placehold.co/1024x576.png', type: 'image', tags: ['code', 'react'] },
-  { id: '4', name: 'Feature_Walkthrough.mp4', src: 'https://placehold.co/1920x1080.png', type: 'video', tags: ['tutorial', 'video'] },
-  { id: '5', name: 'Mobile_App_Mockup.png', src: 'https://placehold.co/414x896.png', type: 'image', tags: ['mobile', 'mockup'] },
-  { id: '6', name: 'Website_Homepage.png', src: 'https://placehold.co/1600x900.png', type: 'image', tags: ['web', 'design'] },
+const initialCode = `import React from "react";
+
+function HelloWorld() {
+  return <h1>Hello, World!</h1>;
+}`;
+
+const gradients = [
+  'bg-gradient-to-br from-purple-500 to-indigo-600',
+  'bg-gradient-to-br from-pink-500 to-rose-500',
+  'bg-gradient-to-br from-green-400 to-blue-500',
+  'bg-gradient-to-br from-yellow-400 to-orange-500',
+  'bg-slate-800'
+];
+
+const languagesList = [
+    { value: 'jsx', label: 'JSX' },
+    { value: 'tsx', label: 'TSX' },
+    { value: 'javascript', label: 'JavaScript' },
+    { value: 'typescript', label: 'TypeScript' },
+    { value: 'css', label: 'CSS' },
+    { value: 'json', label: 'JSON' },
+    { value: 'bash', label: 'Bash' },
+    { value: 'markdown', label: 'Markdown' },
 ];
 
 export default function VisionaryCaptureClient() {
-  const [captures, setCaptures] = useState<Capture[]>(initialCaptures);
-  const [selectedCapture, setSelectedCapture] = useState<Capture | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const { toast } = useToast();
+  const [code, setCode] = useState(initialCode);
+  const [language, setLanguage] = useState('jsx');
+  const [padding, setPadding] = useState(64);
+  const [windowTheme, setWindowTheme] = useState<'dark' | 'light'>('dark');
+  const [background, setBackground] = useState(gradients[0]);
+  
+  const editorRef = useRef<HTMLDivElement>(null);
 
-  const handleFileSelect = async (file: File, type: 'image' | 'video') => {
-    try {
-        const dataUri = await fileToDataUri(file);
-        const newCapture: Capture = {
-            id: crypto.randomUUID(),
-            name: file.name,
-            src: dataUri,
-            type: type,
-            tags: ['new', 'capture'],
-            file: file,
-        };
-        setCaptures(prev => [newCapture, ...prev]);
-        setSelectedCapture(newCapture);
-        toast({
-            title: "Capture Added",
-            description: `${file.name} has been added to your library.`,
-        });
-    } catch (error) {
-        console.error("Error handling file select:", error);
-        toast({
-            variant: "destructive",
-            title: "File Error",
-            description: "There was an error processing your file.",
-        });
+  const handleDownload = useCallback(() => {
+    if (editorRef.current === null) {
+      return;
     }
-  };
-
-  const handleSelectCapture = (capture: Capture) => {
-    setSelectedCapture(capture);
-  };
-
-  const handleBackToFiles = () => {
-    setSelectedCapture(null);
-  };
-
-  const handleDeleteCapture = (id: string) => {
-    setCaptures(captures.filter(c => c.id !== id));
-    setSelectedCapture(null);
-    toast({
-        title: "Capture Deleted",
-        description: `The capture has been removed from your library.`,
-    });
-  };
-
-  const handleUpdateCapture = (id: string, updates: Partial<Capture>) => {
-    setCaptures(captures.map(c => c.id === id ? { ...c, ...updates } : c));
-    if (selectedCapture?.id === id) {
-        setSelectedCapture(prev => prev ? { ...prev, ...updates } : null);
-    }
-    toast({
-        title: "Capture Updated",
-        description: `The capture has been successfully updated.`,
-    });
-  };
+    toPng(editorRef.current, { cacheBust: true, pixelRatio: 2 })
+      .then((dataUrl) => {
+        const link = document.createElement('a');
+        link.download = 'code-snippet.png';
+        link.href = dataUrl;
+        link.click();
+      })
+      .catch((err) => {
+        console.error(err);
+      });
+  }, [editorRef]);
 
   return (
-    <SidebarProvider>
-      <AppSidebar onFileSelect={handleFileSelect} />
-      <SidebarInset className="p-0 m-0 h-screen overflow-hidden">
-        {selectedCapture ? (
-          <EditorPanel 
-            capture={selectedCapture}
-            onBack={handleBackToFiles}
-            onDelete={handleDeleteCapture}
-            onUpdate={handleUpdateCapture}
-          />
-        ) : (
-          <FileManager 
-            captures={captures} 
-            onSelectCapture={handleSelectCapture}
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-          />
-        )}
-      </SidebarInset>
-    </SidebarProvider>
+    <div className="min-h-screen w-full flex flex-col items-center justify-center bg-background text-foreground p-4 md:p-8 font-code">
+      <main className="flex flex-col items-center justify-center gap-8 w-full">
+        <div ref={editorRef} className={cn('transition-all duration-300 rounded-xl', background)} style={{ padding: `${padding}px` }}>
+          <div
+            className={cn(
+              'rounded-xl shadow-2xl overflow-hidden',
+              windowTheme === 'dark' ? 'bg-black/75' : 'bg-gray-50/75',
+              'backdrop-blur-sm'
+            )}
+          >
+            <div className="flex items-center gap-1.5 px-4 py-3 bg-black/20">
+                <span className="h-3.5 w-3.5 rounded-full bg-red-500"></span>
+                <span className="h-3.5 w-3.5 rounded-full bg-yellow-500"></span>
+                <span className="h-3.5 w-3.5 rounded-full bg-green-500"></span>
+            </div>
+            <div className={cn("code-editor-container p-4", windowTheme)}>
+                <Editor
+                    value={code}
+                    onValueChange={setCode}
+                    highlight={(code) => highlight(code, languages[language] || languages.clike, language)}
+                    padding={0}
+                    className="editor"
+                    style={{
+                        fontFamily: '"JetBrains Mono", monospace',
+                        fontSize: 16,
+                        lineHeight: 1.6,
+                        minWidth: '600px',
+                    }}
+                />
+            </div>
+          </div>
+        </div>
+
+        <Card className="w-full max-w-4xl fixed bottom-4 md:bottom-8">
+          <CardContent className="p-4 flex flex-col md:flex-row gap-4 md:items-center">
+            <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-4 items-center">
+                <div>
+                    <Label className="mb-2 block text-xs">Language</Label>
+                    <Select value={language} onValueChange={setLanguage}>
+                        <SelectTrigger className="h-9">
+                            <SelectValue placeholder="Language" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {languagesList.map((lang) => (
+                                <SelectItem key={lang.value} value={lang.value}>
+                                    {lang.label}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div>
+                    <Label className="mb-2 block text-xs">Padding ({padding}px)</Label>
+                    <Slider
+                        value={[padding]}
+                        onValueChange={(value) => setPadding(value[0])}
+                        min={16}
+                        max={128}
+                        step={8}
+                    />
+                </div>
+                <div>
+                    <Label className="mb-2 block text-xs">Background</Label>
+                    <div className="flex items-center gap-2">
+                        {gradients.map((grad) => (
+                            <button
+                                key={grad}
+                                onClick={() => setBackground(grad)}
+                                className={cn(
+                                    'h-7 w-7 rounded-full transition-all duration-200 border-2 border-transparent',
+                                    grad,
+                                    background === grad ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''
+                                )}
+                            />
+                        ))}
+                    </div>
+                </div>
+                 <div>
+                    <Label className="mb-2 block text-xs">Theme</Label>
+                     <Button onClick={() => setWindowTheme(windowTheme === 'dark' ? 'light' : 'dark')} variant="outline" className="w-full h-9">
+                        {windowTheme === 'dark' ? <Sun className="mr-2"/> : <Moon className="mr-2"/>}
+                        {windowTheme === 'dark' ? 'Light' : 'Dark'}
+                    </Button>
+                </div>
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={handleDownload} className="w-full md:w-auto">
+                <Download className="mr-2" />
+                Export PNG
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </main>
+    </div>
   );
 }
