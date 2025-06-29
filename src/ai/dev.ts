@@ -3,3 +3,4 @@ config();
 
 import '@/ai/flows/redact-sensitive-info.ts';
 import '@/ai/flows/extract-text-from-screenshot.ts';
+import '@/ai/flows/explain-code.ts';

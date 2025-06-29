@@ -231,3 +231,22 @@ body {
 .code-editor-container.dark .token.inserted {
 	color: green;
 }
+
+.explanation-content h2 {
+    @apply text-xl font-headline font-semibold mt-4 mb-2;
+}
+.explanation-content h3 {
+    @apply text-lg font-headline font-semibold mt-3 mb-1;
+}
+.explanation-content p {
+    @apply mb-2 leading-relaxed;
+}
+.explanation-content ul {
+    @apply list-disc list-inside mb-2 pl-4;
+}
+.explanation-content li {
+    @apply mb-1;
+}
+.explanation-content code {
+    @apply bg-muted text-muted-foreground rounded-sm px-1 py-0.5 text-sm font-code;
+}
