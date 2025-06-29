@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback, useMemo } from 'react';
+import { useState, useRef, useCallback, useMemo, forwardRef } from 'react';
 import { toPng } from 'html-to-image';
 import Editor from 'react-simple-code-editor';
 import { highlight, languages } from 'prismjs/components/prism-core';
@@ -15,40 +15,48 @@ import 'prismjs/components/prism-json';
 import 'prismjs/components/prism-bash';
 import 'prismjs/components/prism-markdown';
 
-import { cn } from '@/lib/utils';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Brush, Download, Loader2, Moon, Settings, Sun, Wand2 } from 'lucide-react';
-import { Slider } from '@/components/ui/slider';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Switch } from './ui/switch';
-import { Input } from './ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { explainCode } from '@/ai/flows/explain-code';
+import { cn } from '@/lib/utils';
+import { Brush, Code, Download, Loader2, Settings, Sparkles } from "lucide-react";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
 
+// Type definitions
+type WindowTheme = 'dark' | 'light' | 'midnight' | 'sunrise';
+type Language = 'jsx' | 'tsx' | 'javascript' | 'typescript' | 'css' | 'json' | 'bash' | 'markdown';
 const initialCode = `import React from "react";
 
 function HelloWorld() {
   return <h1>Hello, World!</h1>;
 }`;
 
-const gradients = [
-  'bg-gradient-to-br from-purple-500 to-indigo-600',
-  'bg-gradient-to-br from-pink-500 to-rose-500',
-  'bg-gradient-to-br from-green-400 to-blue-500',
-  'bg-gradient-to-br from-yellow-400 to-orange-500',
-  'bg-slate-800'
+// Data for controls
+const backgrounds = [
+  { value: "bg-gradient-to-br from-purple-500 to-indigo-600", name: "Purple Dream" },
+  { value: "bg-gradient-to-br from-pink-500 to-rose-500", name: "Sunset" },
+  { value: "bg-gradient-to-br from-green-400 to-blue-500", name: "Ocean" },
+  { value: "bg-gradient-to-br from-yellow-400 to-orange-500", name: "Citrus" },
+  { value: "bg-gradient-to-br from-teal-400 to-cyan-600", name: "Aqua" },
+  { value: "bg-gradient-to-br from-rose-400 via-fuchsia-500 to-indigo-500", name: "Aurora" },
+  { value: "bg-slate-800", name: "Slate" },
+  { value: "bg-zinc-900", name: "Zinc" },
+  { value: "bg-neutral-50", name: "White" },
 ];
 
-const languagesList = [
+const themes: {value: WindowTheme, label: string}[] = [
+    { value: 'dark', label: 'Dark' },
+    { value: 'light', label: 'Light' },
+    { value: 'midnight', label: 'Midnight' },
+    { value: 'sunrise', label: 'Sunrise' },
+];
+
+const languagesList: {value: Language, label: string}[] = [
     { value: 'jsx', label: 'JSX' },
     { value: 'tsx', label: 'TSX' },
     { value: 'javascript', label: 'JavaScript' },
@@ -59,38 +67,298 @@ const languagesList = [
     { value: 'markdown', label: 'Markdown' },
 ];
 
+// ControlPanel Component
+interface ControlPanelProps {
+  state: any;
+  setters: any;
+  handlers: any;
+}
+
+function ControlPanel({ state, setters, handlers }: ControlPanelProps) {
+  return (
+    <aside className="w-full md:w-80 lg:w-96 bg-card border-r flex flex-col">
+      <div className="p-4 border-b">
+        <h1 className="text-xl font-bold font-headline">Visionary Capture</h1>
+        <p className="text-sm text-muted-foreground">
+          Create beautiful code screenshots.
+        </p>
+      </div>
+      <div className="flex-1 overflow-y-auto">
+        <Accordion type="multiple" defaultValue={["style", "settings"]} className="w-full">
+          <AccordionItem value="style">
+            <AccordionTrigger className="px-4 text-base">
+              <div className="flex items-center gap-2">
+                <Brush className="h-4 w-4" /> Style
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="px-4 pt-2 space-y-4">
+              <div>
+                <Label className="mb-2 block text-xs">Background</Label>
+                <div className="grid grid-cols-5 gap-2">
+                  {backgrounds.map((bg) => (
+                    <button
+                      key={bg.value}
+                      title={bg.name}
+                      onClick={() => setters.setBackground(bg.value)}
+                      className={cn(
+                        "h-8 w-full rounded-md transition-all duration-200 border-2 border-transparent",
+                        bg.value,
+                        state.background === bg.value
+                          ? "ring-2 ring-primary ring-offset-2 ring-offset-background"
+                          : "hover:scale-105"
+                      )}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div>
+                <Label className="mb-2 block text-xs">Window Theme</Label>
+                 <Select value={state.windowTheme} onValueChange={setters.setWindowTheme}>
+                    <SelectTrigger>
+                        <SelectValue placeholder="Theme" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {themes.map((theme) => (
+                            <SelectItem key={theme.value} value={theme.value}>
+                                {theme.label}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="mb-2 block text-xs">
+                  Padding ({state.padding}px)
+                </Label>
+                <Slider
+                  value={[state.padding]}
+                  onValueChange={(value) => setters.setPadding(value[0])}
+                  min={16}
+                  max={128}
+                  step={8}
+                />
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="settings">
+            <AccordionTrigger className="px-4 text-base">
+              <div className="flex items-center gap-2">
+                <Settings className="h-4 w-4" /> Settings
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="px-4 pt-2 space-y-4">
+                <div>
+                    <Label className="mb-2 block text-xs">Language</Label>
+                    <Select value={state.language} onValueChange={setters.setLanguage}>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Language" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {languagesList.map((lang) => (
+                                <SelectItem key={lang.value} value={lang.value}>
+                                    {lang.label}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="flex items-center space-x-2 pt-2">
+                    <Switch
+                        id="line-numbers"
+                        checked={state.showLineNumbers}
+                        onCheckedChange={setters.setShowLineNumbers}
+                    />
+                    <Label htmlFor="line-numbers">Show Line Numbers</Label>
+                </div>
+                <div>
+                    <Label className="mb-2 block text-xs">Watermark</Label>
+                    <Input
+                        value={state.watermark}
+                        onChange={(e) => setters.setWatermark(e.target.value)}
+                        placeholder="Your watermark"
+                    />
+                </div>
+            </AccordionContent>
+          </AccordionItem>
+          
+          <AccordionItem value="ai">
+            <AccordionTrigger className="px-4 text-base">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4" /> AI Tools
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="px-4 pt-2 space-y-4">
+                <p className="text-sm text-muted-foreground">Generate an explanation of your code to better understand its functionality.</p>
+                <Button onClick={handlers.handleExplainCode} variant="outline" className="w-full" disabled={state.isExplaining}>
+                    {state.isExplaining ? <Loader2 className="animate-spin" /> : <Code className="mr-2" />}
+                    Explain Code
+                </Button>
+                {(state.isExplaining || state.explanation) && (
+                    <div className="border rounded-md p-3 max-h-48 overflow-y-auto bg-background/50">
+                        {state.isExplaining && !state.explanation && <p className="text-sm text-muted-foreground">Generating explanation...</p>}
+                        {state.explanation && <div
+                            className="explanation-content max-w-none text-sm"
+                            dangerouslySetInnerHTML={{ __html: state.explanation }}
+                        />}
+                    </div>
+                )}
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+      </div>
+
+      <div className="p-4 border-t mt-auto">
+        <Button
+          onClick={handlers.handleDownload}
+          className="w-full"
+          disabled={state.isDownloading}
+        >
+          {state.isDownloading ? (
+            <Loader2 className="animate-spin" />
+          ) : (
+            <>
+              <Download className="mr-2" />
+              Download PNG
+            </>
+          )}
+        </Button>
+         <p className="text-xs text-muted-foreground text-center mt-2">HD rendering enabled for best quality.</p>
+      </div>
+    </aside>
+  );
+}
+
+// CodePreview Component
+interface CodePreviewProps {
+    code: string;
+    language: Language;
+    padding: number;
+    windowTheme: WindowTheme;
+    background: string;
+    showLineNumbers: boolean;
+    watermark: string;
+    setCode: (code: string) => void;
+  }
+  
+const CodePreview = forwardRef<HTMLDivElement, CodePreviewProps>(
+({ code, language, padding, windowTheme, background, showLineNumbers, watermark, setCode }, ref) => {
+    
+    const lineCount = useMemo(() => code.split('\n').length, [code]);
+    const lines = useMemo(() => Array.from({ length: lineCount }, (_, i) => i + 1), [lineCount]);
+    
+    const themeClass = {
+        dark: 'bg-black/75 dark',
+        light: 'bg-white/75 light',
+        midnight: 'bg-[#0d1117]/80 dark',
+        sunrise: 'bg-[#fafafa]/80 light'
+    }[windowTheme];
+
+    const windowChromeClass = {
+        dark: 'bg-black/20',
+        light: 'bg-gray-200/80',
+        midnight: 'bg-black/30',
+        sunrise: 'bg-gray-100/90'
+    }[windowTheme];
+
+    return (
+        <div ref={ref} className={cn('transition-all duration-300 rounded-xl relative', background)} style={{ padding: `${padding}px` }}>
+            <div
+                className={cn(
+                'rounded-xl shadow-2xl overflow-hidden backdrop-blur-sm',
+                themeClass
+                )}
+            >
+                <div className={cn("flex items-center gap-1.5 px-4 py-3", windowChromeClass)}>
+                    <span className="h-3.5 w-3.5 rounded-full bg-red-500"></span>
+                    <span className="h-3.5 w-3.5 rounded-full bg-yellow-500"></span>
+                    <span className="h-3.5 w-3.5 rounded-full bg-green-500"></span>
+                </div>
+                <div className="flex items-start">
+                    {showLineNumbers && (
+                        <div
+                            className="flex-shrink-0 select-none py-4 pl-4 pr-3 text-right text-muted-foreground"
+                            style={{
+                                fontFamily: '"JetBrains Mono", monospace',
+                                fontSize: 16,
+                                lineHeight: 1.6,
+                            }}
+                        >
+                        {lines.map((num) => (
+                            <div key={num}>{num}</div>
+                        ))}
+                        </div>
+                    )}
+                    <div className={cn('code-editor-container py-4 pr-4 w-full', windowTheme === 'light' || windowTheme === 'sunrise' ? 'light' : 'dark', !showLineNumbers && "pl-4")}>
+                        <Editor
+                            value={code}
+                            onValueChange={setCode}
+                            highlight={(code) => highlight(code, languages[language] || languages.clike, language)}
+                            padding={0}
+                            className="editor"
+                            style={{
+                                fontFamily: '"JetBrains Mono", monospace',
+                                fontSize: 16,
+                                lineHeight: 1.6,
+                                minWidth: '550px',
+                            }}
+                        />
+                    </div>
+                </div>
+            </div>
+            {watermark && (
+                <div className="absolute bottom-6 right-8 text-white/50 text-sm font-sans pointer-events-none">
+                    {watermark}
+                </div>
+            )}
+        </div>
+    );
+});
+CodePreview.displayName = 'CodePreview';
+
+// Main Client Component
 export default function VisionaryCaptureClient() {
   const [code, setCode] = useState(initialCode);
-  const [language, setLanguage] = useState('jsx');
+  const [language, setLanguage] = useState<Language>('jsx');
   const [padding, setPadding] = useState(64);
-  const [windowTheme, setWindowTheme] = useState<'dark' | 'light'>('dark');
-  const [background, setBackground] = useState(gradients[0]);
+  const [windowTheme, setWindowTheme] = useState<WindowTheme>('dark');
+  const [background, setBackground] = useState(backgrounds[0].value);
   const [showLineNumbers, setShowLineNumbers] = useState(true);
   const [watermark, setWatermark] = useState('Visionary Capture');
   const [explanation, setExplanation] = useState('');
   const [isExplaining, setIsExplaining] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const { toast } = useToast();
   const editorRef = useRef<HTMLDivElement>(null);
 
-  const lineCount = useMemo(() => code.split('\n').length, [code]);
-  const lines = useMemo(() => Array.from({ length: lineCount }, (_, i) => i + 1), [lineCount]);
-
   const handleDownload = useCallback(() => {
     if (editorRef.current === null) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Could not find the element to capture.",
+      });
       return;
     }
-    toPng(editorRef.current, { cacheBust: true, pixelRatio: 2 })
+    setIsDownloading(true);
+    toPng(editorRef.current, { cacheBust: true, pixelRatio: 2.5 })
       .then((dataUrl) => {
         const link = document.createElement('a');
-        link.download = 'code-snippet.png';
+        link.download = 'visionary-capture.png';
         link.href = dataUrl;
         link.click();
       })
       .catch((err) => {
         console.error(err);
-      });
-  }, [editorRef]);
+        toast({
+            variant: "destructive",
+            title: "Download Failed",
+            description: "Could not generate the image.",
+        });
+      })
+      .finally(() => setIsDownloading(false));
+  }, [editorRef, toast]);
 
   const handleExplainCode = async () => {
     setIsExplaining(true);
@@ -110,174 +378,15 @@ export default function VisionaryCaptureClient() {
     }
   };
 
+  const state = { code, language, padding, windowTheme, background, showLineNumbers, watermark, explanation, isExplaining, isDownloading };
+  const setters = { setCode, setLanguage, setPadding, setWindowTheme, setBackground, setShowLineNumbers, setWatermark };
+  const handlers = { handleDownload, handleExplainCode };
+
   return (
-    <div className="min-h-screen w-full flex flex-col items-center justify-center bg-background text-foreground p-4 md:p-8 font-code">
-      <main className="flex flex-col items-center justify-center gap-8 w-full">
-        <div ref={editorRef} className={cn('transition-all duration-300 rounded-xl relative', background)} style={{ padding: `${padding}px` }}>
-          <div
-            className={cn(
-              'rounded-xl shadow-2xl overflow-hidden',
-              windowTheme === 'dark' ? 'bg-black/75' : 'bg-gray-50/75',
-              'backdrop-blur-sm'
-            )}
-          >
-            <div className="flex items-center gap-1.5 px-4 py-3 bg-black/20">
-                <span className="h-3.5 w-3.5 rounded-full bg-red-500"></span>
-                <span className="h-3.5 w-3.5 rounded-full bg-yellow-500"></span>
-                <span className="h-3.5 w-3.5 rounded-full bg-green-500"></span>
-            </div>
-            <div className="flex items-start">
-                {showLineNumbers && (
-                    <div
-                        className="flex-shrink-0 select-none py-4 pl-4 pr-3 text-right text-muted-foreground"
-                        style={{
-                            fontFamily: '"JetBrains Mono", monospace',
-                            fontSize: 16,
-                            lineHeight: 1.6,
-                        }}
-                    >
-                    {lines.map((num) => (
-                        <div key={num}>{num}</div>
-                    ))}
-                    </div>
-                )}
-                <div className={cn('code-editor-container py-4 pr-4 w-full', windowTheme, !showLineNumbers && "pl-4")}>
-                    <Editor
-                        value={code}
-                        onValueChange={setCode}
-                        highlight={(code) => highlight(code, languages[language] || languages.clike, language)}
-                        padding={0}
-                        className="editor"
-                        style={{
-                            fontFamily: '"JetBrains Mono", monospace',
-                            fontSize: 16,
-                            lineHeight: 1.6,
-                            minWidth: '600px',
-                        }}
-                    />
-                </div>
-            </div>
-          </div>
-          {watermark && (
-            <div className="absolute bottom-4 right-6 text-white/50 text-sm font-sans pointer-events-none">
-                {watermark}
-            </div>
-          )}
-        </div>
-
-        <Card className="w-full max-w-4xl fixed bottom-4 md:bottom-8">
-            <CardContent className="p-4">
-                <Tabs defaultValue="style" className="w-full">
-                    <div className="flex justify-between items-start md:items-center mb-4 flex-col md:flex-row gap-4">
-                        <TabsList>
-                            <TabsTrigger value="style"><Brush className="mr-2"/>Style</TabsTrigger>
-                            <TabsTrigger value="settings"><Settings className="mr-2"/>Settings</TabsTrigger>
-                            <TabsTrigger value="ai"><Wand2 className="mr-2"/>AI Tools</TabsTrigger>
-                        </TabsList>
-                        <Button onClick={handleDownload} className="w-full md:w-auto">
-                            <Download className="mr-2" />
-                            Export PNG
-                        </Button>
-                    </div>
-
-                    <TabsContent value="style" className="mt-6 md:mt-0">
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-center">
-                            <div>
-                                <Label className="mb-2 block text-xs">Padding ({padding}px)</Label>
-                                <Slider
-                                    value={[padding]}
-                                    onValueChange={(value) => setPadding(value[0])}
-                                    min={16}
-                                    max={128}
-                                    step={8}
-                                />
-                            </div>
-                            <div>
-                                <Label className="mb-2 block text-xs">Background</Label>
-                                <div className="flex items-center gap-2">
-                                    {gradients.map((grad) => (
-                                        <button
-                                            key={grad}
-                                            onClick={() => setBackground(grad)}
-                                            className={cn(
-                                                'h-7 w-7 rounded-full transition-all duration-200 border-2 border-transparent',
-                                                grad,
-                                                background === grad ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''
-                                            )}
-                                        />
-                                    ))}
-                                </div>
-                            </div>
-                            <div>
-                                <Label className="mb-2 block text-xs">Theme</Label>
-                                <Button onClick={() => setWindowTheme(windowTheme === 'dark' ? 'light' : 'dark')} variant="outline" className="w-full h-9">
-                                    {windowTheme === 'dark' ? <Sun className="mr-2"/> : <Moon className="mr-2"/>}
-                                    {windowTheme === 'dark' ? 'Light' : 'Dark'}
-                                </Button>
-                            </div>
-                        </div>
-                    </TabsContent>
-
-                    <TabsContent value="settings" className="mt-6 md:mt-0">
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-center">
-                            <div>
-                                <Label className="mb-2 block text-xs">Language</Label>
-                                <Select value={language} onValueChange={setLanguage}>
-                                    <SelectTrigger className="h-9">
-                                        <SelectValue placeholder="Language" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {languagesList.map((lang) => (
-                                            <SelectItem key={lang.value} value={lang.value}>
-                                                {lang.label}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="flex items-center space-x-2 pt-5">
-                                <Switch
-                                    id="line-numbers"
-                                    checked={showLineNumbers}
-                                    onCheckedChange={setShowLineNumbers}
-                                />
-                                <Label htmlFor="line-numbers">Line Numbers</Label>
-                            </div>
-                            <div>
-                                <Label className="mb-2 block text-xs">Watermark</Label>
-                                <Input
-                                    value={watermark}
-                                    onChange={(e) => setWatermark(e.target.value)}
-                                    placeholder="Your watermark"
-                                    className="h-9"
-                                />
-                            </div>
-                        </div>
-                    </TabsContent>
-
-                    <TabsContent value="ai" className="mt-6 md:mt-0">
-                        <div className="flex flex-col gap-4">
-                            <div className="flex items-center gap-4">
-                                <p className="text-sm text-muted-foreground flex-1">Generate an explanation of your code to better understand its functionality.</p>
-                                <Button onClick={handleExplainCode} variant="outline" disabled={isExplaining}>
-                                    {isExplaining ? <Loader2 className="animate-spin" /> : <Wand2 className="mr-2" />}
-                                    Explain Code
-                                </Button>
-                            </div>
-                            {(isExplaining || explanation) && (
-                                <div className="border rounded-md p-4 max-h-48 overflow-y-auto">
-                                    {isExplaining && !explanation && <p className="text-sm text-muted-foreground">Generating explanation...</p>}
-                                    {explanation && <div
-                                        className="explanation-content max-w-none text-sm"
-                                        dangerouslySetInnerHTML={{ __html: explanation }}
-                                    />}
-                                </div>
-                            )}
-                        </div>
-                    </TabsContent>
-                </Tabs>
-            </CardContent>
-        </Card>
+    <div className="min-h-screen w-full flex flex-col md:flex-row bg-background text-foreground font-sans">
+      <ControlPanel state={state} setters={setters} handlers={handlers} />
+      <main className="flex-1 flex items-center justify-center p-4 md:p-8 bg-grid-pattern overflow-auto">
+        <CodePreview ref={editorRef} {...state} setCode={setCode} />
       </main>
     </div>
   );

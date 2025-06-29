@@ -250,3 +250,10 @@ body {
 .explanation-content code {
     @apply bg-muted text-muted-foreground rounded-sm px-1 py-0.5 text-sm font-code;
 }
+
+.bg-grid-pattern {
+    background-image:
+        linear-gradient(to right, hsl(var(--border)) 1px, transparent 1px),
+        linear-gradient(to bottom, hsl(var(--border)) 1px, transparent 1px);
+    background-size: 40px 40px;
+}
