@@ -6,6 +6,7 @@ import Editor from 'react-simple-code-editor';
 import { highlight, languages } from 'prismjs/components/prism-core';
 import 'prismjs/components/prism-clike';
 import 'prismjs/components/prism-markup';
+import 'prismjs/components/prism-markup-templating';
 import 'prismjs/components/prism-javascript';
 import 'prismjs/components/prism-typescript';
 import 'prismjs/components/prism-jsx';
@@ -14,6 +15,14 @@ import 'prismjs/components/prism-css';
 import 'prismjs/components/prism-json';
 import 'prismjs/components/prism-bash';
 import 'prismjs/components/prism-markdown';
+import 'prismjs/components/prism-python';
+import 'prismjs/components/prism-java';
+import 'prismjs/components/prism-csharp';
+import 'prismjs/components/prism-go';
+import 'prismjs/components/prism-rust';
+import 'prismjs/components/prism-php';
+import 'prismjs/components/prism-sql';
+import 'prismjs/components/prism-yaml';
 
 import { useToast } from '@/hooks/use-toast';
 import { explainCode } from '@/ai/flows/explain-code';
@@ -29,7 +38,7 @@ import { Switch } from "@/components/ui/switch";
 
 // Type definitions
 type WindowTheme = 'dark' | 'light' | 'midnight' | 'sunrise';
-type Language = 'jsx' | 'tsx' | 'javascript' | 'typescript' | 'css' | 'json' | 'bash' | 'markdown';
+type Language = 'jsx' | 'tsx' | 'javascript' | 'typescript' | 'css' | 'json' | 'bash' | 'markdown' | 'python' | 'java' | 'csharp' | 'go' | 'rust' | 'php' | 'sql' | 'yaml';
 const initialCode = `import React from "react";
 
 function HelloWorld() {
@@ -57,12 +66,20 @@ const themes: {value: WindowTheme, label: string}[] = [
 ];
 
 const languagesList: {value: Language, label: string}[] = [
-    { value: 'jsx', label: 'JSX' },
-    { value: 'tsx', label: 'TSX' },
     { value: 'javascript', label: 'JavaScript' },
+    { value: 'jsx', label: 'JSX' },
     { value: 'typescript', label: 'TypeScript' },
+    { value: 'tsx', label: 'TSX' },
+    { value: 'python', label: 'Python' },
+    { value: 'java', label: 'Java' },
+    { value: 'csharp', label: 'C#' },
+    { value: 'go', label: 'Go' },
+    { value: 'rust', label: 'Rust' },
+    { value: 'php', label: 'PHP' },
+    { value: 'sql', label: 'SQL' },
     { value: 'css', label: 'CSS' },
     { value: 'json', label: 'JSON' },
+    { value: 'yaml', label: 'YAML' },
     { value: 'bash', label: 'Bash' },
     { value: 'markdown', label: 'Markdown' },
 ];
@@ -150,7 +167,7 @@ function ControlPanel({ state, setters, handlers }: ControlPanelProps) {
             <AccordionContent className="px-4 pt-2 space-y-4">
                 <div>
                     <Label className="mb-2 block text-xs">Language</Label>
-                    <Select value={state.language} onValueChange={setters.setLanguage}>
+                    <Select value={state.language} onValueChange={(val: Language) => setters.setLanguage(val)}>
                         <SelectTrigger>
                             <SelectValue placeholder="Language" />
                         </SelectTrigger>
