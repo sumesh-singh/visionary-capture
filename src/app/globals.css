@@ -77,6 +77,7 @@ body {
     background: transparent !important;
 }
 
+.code-editor-container.light .editor,
 .code-editor-container.light code[class*="language-"],
 .code-editor-container.light pre[class*="language-"] {
 	color: #383a42;
@@ -115,8 +116,8 @@ body {
 .code-editor-container.light .token.operator,
 .code-editor-container.light .token.entity,
 .code-editor-container.light .token.url,
-.language-css .token.string,
-.style .token.string {
+.code-editor-container.light .language-css .token.string,
+.code-editor-container.light .style .token.string {
 	color: #0184bc;
 }
 
