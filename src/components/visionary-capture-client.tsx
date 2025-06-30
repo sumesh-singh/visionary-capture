@@ -203,7 +203,7 @@ function ControlPanel({ state, setters, handlers }: ControlPanelProps) {
       <div className="p-4 border-t mt-auto">
         <Button
           onClick={handlers.handleDownload}
-          className="w-full"
+          className="w-full rounded-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
           disabled={state.isDownloading}
         >
           {state.isDownloading ? (
