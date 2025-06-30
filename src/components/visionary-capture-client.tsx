@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useRef, useCallback, useMemo, forwardRef } from 'react';
@@ -26,7 +27,7 @@ import 'prismjs/components/prism-yaml';
 
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { Brush, Download, Loader2, Settings } from "lucide-react";
+import { Brush, Download, Image as ImageIcon, Loader2, Settings } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -91,6 +92,11 @@ interface ControlPanelProps {
 }
 
 function ControlPanel({ state, setters, handlers }: ControlPanelProps) {
+  const handleCustomBgChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setters.setCustomBackground(e.target.value);
+    setters.setActiveBg(e.target.value);
+  }
+  
   return (
     <aside className="w-full md:w-80 lg:w-96 bg-card border-r flex flex-col">
       <div className="p-4 border-b">
@@ -100,7 +106,7 @@ function ControlPanel({ state, setters, handlers }: ControlPanelProps) {
         </p>
       </div>
       <div className="flex-1 overflow-y-auto">
-        <Accordion type="multiple" defaultValue={["style", "settings"]} className="w-full">
+        <Accordion type="multiple" defaultValue={["style", "settings", "effects"]} className="w-full">
           <AccordionItem value="style">
             <AccordionTrigger className="px-4 text-base">
               <div className="flex items-center gap-2">
@@ -109,22 +115,40 @@ function ControlPanel({ state, setters, handlers }: ControlPanelProps) {
             </AccordionTrigger>
             <AccordionContent className="px-4 pt-2 space-y-4">
               <div>
-                <Label className="mb-2 block text-xs">Background</Label>
+                <Label className="mb-2 block text-xs">Background Gradients</Label>
                 <div className="grid grid-cols-5 gap-2">
                   {backgrounds.map((bg) => (
                     <button
                       key={bg.value}
                       title={bg.name}
-                      onClick={() => setters.setBackground(bg.value)}
+                      onClick={() => setters.setActiveBg(bg.value)}
                       className={cn(
-                        "h-8 w-full rounded-md transition-all duration-200 border-2 border-transparent",
+                        "h-8 w-full rounded-md transition-all duration-200 border-2",
                         bg.value,
-                        state.background === bg.value
-                          ? "ring-2 ring-primary ring-offset-2 ring-offset-background"
-                          : "hover:scale-105"
+                        state.activeBg === bg.value
+                          ? "ring-2 ring-primary ring-offset-2 ring-offset-background border-primary"
+                          : "border-transparent hover:scale-105"
                       )}
                     />
                   ))}
+                </div>
+              </div>
+               <div>
+                <Label htmlFor="custom-bg-color" className="mb-2 block text-xs">Custom Color</Label>
+                <div className="flex items-center gap-2">
+                  <Input 
+                    id="custom-bg-color"
+                    type="color" 
+                    value={state.customBackground} 
+                    onChange={handleCustomBgChange}
+                    className="w-10 h-10 p-1" 
+                  />
+                  <Input 
+                    type="text"
+                    value={state.customBackground}
+                    onChange={handleCustomBgChange}
+                    className="flex-1"
+                  />
                 </div>
               </div>
               <div>
@@ -152,6 +176,40 @@ function ControlPanel({ state, setters, handlers }: ControlPanelProps) {
                   min={16}
                   max={128}
                   step={8}
+                />
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+          
+          <AccordionItem value="effects">
+            <AccordionTrigger className="px-4 text-base">
+              <div className="flex items-center gap-2">
+                <ImageIcon className="h-4 w-4" /> Effects
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="px-4 pt-2 space-y-4">
+              <div>
+                <Label className="mb-2 block text-xs">Brightness ({state.brightness}%)</Label>
+                <Slider
+                  value={[state.brightness]}
+                  onValueChange={(v) => setters.setBrightness(v[0])}
+                  min={50} max={150} step={1}
+                />
+              </div>
+              <div>
+                <Label className="mb-2 block text-xs">Contrast ({state.contrast}%)</Label>
+                <Slider
+                  value={[state.contrast]}
+                  onValueChange={(v) => setters.setContrast(v[0])}
+                  min={50} max={150} step={1}
+                />
+              </div>
+              <div>
+                <Label className="mb-2 block text-xs">Saturation ({state.saturation}%)</Label>
+                <Slider
+                  value={[state.saturation]}
+                  onValueChange={(v) => setters.setSaturation(v[0])}
+                  min={0} max={200} step={1}
                 />
               </div>
             </AccordionContent>
@@ -227,14 +285,17 @@ interface CodePreviewProps {
     language: Language;
     padding: number;
     windowTheme: WindowTheme;
-    background: string;
+    activeBg: string;
     showLineNumbers: boolean;
     watermark: string;
+    brightness: number;
+    contrast: number;
+    saturation: number;
     setCode: (code: string) => void;
   }
   
 const CodePreview = forwardRef<HTMLDivElement, CodePreviewProps>(
-({ code, language, padding, windowTheme, background, showLineNumbers, watermark, setCode }, ref) => {
+({ code, language, padding, windowTheme, activeBg, showLineNumbers, watermark, brightness, contrast, saturation, setCode }, ref) => {
     
     const lineCount = useMemo(() => code.split('\n').length, [code]);
     const lines = useMemo(() => Array.from({ length: lineCount }, (_, i) => i + 1), [lineCount]);
@@ -253,8 +314,18 @@ const CodePreview = forwardRef<HTMLDivElement, CodePreviewProps>(
         sunrise: 'bg-gray-100/90'
     }[windowTheme];
 
+    const isGradient = activeBg.startsWith('bg-');
+    const backgroundClass = isGradient ? activeBg : '';
+    const backgroundStyle = !isGradient ? { backgroundColor: activeBg } : {};
+    
+    const previewStyles = {
+      padding: `${padding}px`,
+      ...backgroundStyle,
+      filter: `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%)`
+    };
+
     return (
-        <div ref={ref} className={cn('transition-all duration-300 rounded-xl relative', background)} style={{ padding: `${padding}px` }}>
+        <div ref={ref} className={cn('transition-all duration-300 rounded-xl relative', backgroundClass)} style={previewStyles}>
             <div
                 className={cn(
                 'rounded-xl shadow-2xl overflow-hidden backdrop-blur-sm',
@@ -314,10 +385,14 @@ export default function VisionaryCaptureClient() {
   const [language, setLanguage] = useState<Language>('jsx');
   const [padding, setPadding] = useState(64);
   const [windowTheme, setWindowTheme] = useState<WindowTheme>('dark');
-  const [background, setBackground] = useState(backgrounds[0].value);
+  const [activeBg, setActiveBg] = useState(backgrounds[0].value);
+  const [customBackground, setCustomBackground] = useState('#2a2a2a');
   const [showLineNumbers, setShowLineNumbers] = useState(true);
   const [watermark, setWatermark] = useState('Visionary Capture');
   const [isDownloading, setIsDownloading] = useState(false);
+  const [brightness, setBrightness] = useState(100);
+  const [contrast, setContrast] = useState(100);
+  const [saturation, setSaturation] = useState(100);
 
   const { toast } = useToast();
   const editorRef = useRef<HTMLDivElement>(null);
@@ -350,8 +425,16 @@ export default function VisionaryCaptureClient() {
       .finally(() => setIsDownloading(false));
   }, [editorRef, toast]);
 
-  const state = { code, language, padding, windowTheme, background, showLineNumbers, watermark, isDownloading };
-  const setters = { setCode, setLanguage, setPadding, setWindowTheme, setBackground, setShowLineNumbers, setWatermark };
+  const state = { 
+    code, language, padding, windowTheme, activeBg, customBackground, 
+    showLineNumbers, watermark, isDownloading,
+    brightness, contrast, saturation
+  };
+  const setters = { 
+    setCode, setLanguage, setPadding, setWindowTheme, setActiveBg, setCustomBackground,
+    setShowLineNumbers, setWatermark, 
+    setBrightness, setContrast, setSaturation
+  };
   const handlers = { handleDownload };
 
   return (
@@ -363,3 +446,5 @@ export default function VisionaryCaptureClient() {
     </div>
   );
 }
+
+    
