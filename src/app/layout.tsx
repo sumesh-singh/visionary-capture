@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster"
 
 export const metadata: Metadata = {
   title: 'Visionary Capture',
-  description: 'Create beautiful images of your code, inspired by Ray.so',
+  description: 'Create and customize stunning screenshots of your code.',
   manifest: '/manifest.json',
   icons: {
     apple: '/icons/icon-192x192.png',

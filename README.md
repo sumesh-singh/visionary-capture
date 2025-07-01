@@ -1,6 +1,6 @@
 # Visionary Capture 📸
 
-Create and customize stunning screenshots of your code. Inspired by tools like Ray.so, Visionary Capture provides a rich set of features to make your code snippets visually appealing for articles, tutorials, social media, and presentations.
+Create and customize stunning screenshots of your code. Visionary Capture provides a rich set of features to make your code snippets visually appealing for articles, tutorials, social media, and presentations.
 
 ![Visionary Capture Screenshot](https://placehold.co/800x450.png)
 
