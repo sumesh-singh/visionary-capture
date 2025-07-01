@@ -310,6 +310,11 @@ interface CodePreviewProps {
 const CodePreview = forwardRef<HTMLDivElement, CodePreviewProps>(
 ({ code, language, padding, windowTheme, activeBg, showLineNumbers, watermark, brightness, contrast, saturation, setCode }, ref) => {
     
+    const [isMounted, setIsMounted] = useState(false);
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
+
     const lineCount = useMemo(() => code.split('\n').length, [code]);
     const lines = useMemo(() => Array.from({ length: lineCount }, (_, i) => i + 1), [lineCount]);
     
@@ -335,6 +340,13 @@ const CodePreview = forwardRef<HTMLDivElement, CodePreviewProps>(
       padding: `${padding}px`,
       ...backgroundStyle,
       filter: `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%)`
+    };
+
+    const highlightCode = (codeToHighlight: string) => {
+        if (!isMounted) {
+            return codeToHighlight;
+        }
+        return highlight(codeToHighlight, languages[language] || languages.clike, language);
     };
 
     return (
@@ -369,7 +381,7 @@ const CodePreview = forwardRef<HTMLDivElement, CodePreviewProps>(
                         <Editor
                             value={code}
                             onValueChange={setCode}
-                            highlight={(code) => highlight(code, languages[language] || languages.clike, language)}
+                            highlight={highlightCode}
                             padding={0}
                             className="editor"
                             style={{
@@ -507,3 +519,5 @@ export default function VisionaryCaptureClient() {
     </div>
   );
 }
+
+    
