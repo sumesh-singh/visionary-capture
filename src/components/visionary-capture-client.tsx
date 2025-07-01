@@ -1,10 +1,12 @@
 
 "use client";
 
-import { useState, useRef, useCallback, useMemo, forwardRef } from 'react';
+import { useState, useRef, useCallback, useMemo, forwardRef, useEffect } from 'react';
 import { toPng } from 'html-to-image';
 import Editor from 'react-simple-code-editor';
 import { highlight, languages } from 'prismjs/components/prism-core';
+
+// PrismJS language dependencies. Order matters.
 import 'prismjs/components/prism-clike';
 import 'prismjs/components/prism-markup';
 import 'prismjs/components/prism-javascript';
@@ -260,6 +262,16 @@ function ControlPanel({ state, setters, handlers }: ControlPanelProps) {
       </div>
 
       <div className="p-4 border-t mt-auto">
+        {state.installPrompt && (
+          <Button
+            onClick={handlers.handleInstallClick}
+            className="w-full mb-2 rounded-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
+            variant="outline"
+          >
+            <Download className="mr-2" />
+            Install App
+          </Button>
+        )}
         <Button
           onClick={handlers.handleDownload}
           className="w-full rounded-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
@@ -341,7 +353,7 @@ const CodePreview = forwardRef<HTMLDivElement, CodePreviewProps>(
                 <div className="flex items-start">
                     {showLineNumbers && (
                         <div
-                            className="flex-shrink-0 select-none py-4 pl-4 pr-3 text-right text-muted-foreground"
+                            className="flex-shrink-0 select-none py-4 pl-4 pr-3 text-muted-foreground"
                             style={{
                                 fontFamily: '"JetBrains Mono", monospace',
                                 fontSize: 16,
@@ -394,9 +406,37 @@ export default function VisionaryCaptureClient() {
   const [contrast, setContrast] = useState(100);
   const [saturation, setSaturation] = useState(100);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState<any>(null);
 
   const { toast } = useToast();
   const editorRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstallClick = () => {
+    if (!installPrompt) {
+      return;
+    }
+    installPrompt.prompt();
+    installPrompt.userChoice.then((choiceResult: { outcome: 'accepted' | 'dismissed' }) => {
+      if (choiceResult.outcome === 'accepted') {
+        toast({ title: "App Installed!", description: "Visionary Capture is now available on your device." });
+      }
+      setInstallPrompt(null);
+      setIsSheetOpen(false);
+    });
+  };
 
   const handleDownload = useCallback(() => {
     if (editorRef.current === null) {
@@ -430,14 +470,14 @@ export default function VisionaryCaptureClient() {
   const state = { 
     code, language, padding, windowTheme, activeBg, customBackground, 
     showLineNumbers, watermark, isDownloading,
-    brightness, contrast, saturation
+    brightness, contrast, saturation, installPrompt
   };
   const setters = { 
     setCode, setLanguage, setPadding, setWindowTheme, setActiveBg, setCustomBackground,
     setShowLineNumbers, setWatermark, 
     setBrightness, setContrast, setSaturation
   };
-  const handlers = { handleDownload };
+  const handlers = { handleDownload, handleInstallClick };
 
   return (
     <div className="min-h-screen w-full flex bg-background text-foreground font-sans">
