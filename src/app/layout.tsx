@@ -1,11 +1,19 @@
-import type {Metadata} from 'next';
+import type {Metadata, Viewport} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 
 export const metadata: Metadata = {
   title: 'Visionary Capture',
   description: 'Create beautiful images of your code, inspired by Ray.so',
+  manifest: '/manifest.json',
+  icons: {
+    apple: '/icons/icon-192x192.png',
+  },
 };
+
+export const viewport: Viewport = {
+  themeColor: '#737CA1',
+}
 
 export default function RootLayout({
   children,
