@@ -414,6 +414,7 @@ export default function VisionaryCaptureClient() {
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
+      console.log('beforeinstallprompt event fired!');
       setInstallPrompt(e);
     };
 
