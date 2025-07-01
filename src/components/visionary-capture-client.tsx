@@ -27,7 +27,7 @@ import 'prismjs/components/prism-yaml';
 
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { Brush, Download, Image as ImageIcon, Loader2, Settings } from "lucide-react";
+import { Brush, Download, Image as ImageIcon, Loader2, Settings, Menu } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,6 +35,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 // Type definitions
 type WindowTheme = 'dark' | 'light' | 'midnight' | 'sunrise';
@@ -98,7 +99,7 @@ function ControlPanel({ state, setters, handlers }: ControlPanelProps) {
   }
   
   return (
-    <aside className="w-full md:w-80 lg:w-96 bg-card border-r flex flex-col">
+    <aside className="w-full h-full bg-card border-r flex flex-col">
       <div className="p-4 border-b">
         <h1 className="text-xl font-bold font-headline">Visionary Capture</h1>
         <p className="text-sm text-muted-foreground">
@@ -106,7 +107,7 @@ function ControlPanel({ state, setters, handlers }: ControlPanelProps) {
         </p>
       </div>
       <div className="flex-1 overflow-y-auto">
-        <Accordion type="multiple" defaultValue={["style", "settings", "effects"]} className="w-full">
+        <Accordion type="multiple" defaultValue={["style", "settings"]} className="w-full">
           <AccordionItem value="style">
             <AccordionTrigger className="px-4 text-base">
               <div className="flex items-center gap-2">
@@ -352,7 +353,7 @@ const CodePreview = forwardRef<HTMLDivElement, CodePreviewProps>(
                         ))}
                         </div>
                     )}
-                    <div className={cn('code-editor-container py-4 pr-4 w-full', windowTheme === 'light' || windowTheme === 'sunrise' ? 'light' : 'dark', !showLineNumbers && "pl-4")}>
+                    <div className={cn('code-editor-container py-4 pr-4 w-full overflow-x-auto', windowTheme === 'light' || windowTheme === 'sunrise' ? 'light' : 'dark', !showLineNumbers && "pl-4")}>
                         <Editor
                             value={code}
                             onValueChange={setCode}
@@ -363,7 +364,6 @@ const CodePreview = forwardRef<HTMLDivElement, CodePreviewProps>(
                                 fontFamily: '"JetBrains Mono", monospace',
                                 fontSize: 16,
                                 lineHeight: 1.6,
-                                minWidth: '550px',
                             }}
                         />
                     </div>
@@ -393,6 +393,7 @@ export default function VisionaryCaptureClient() {
   const [brightness, setBrightness] = useState(100);
   const [contrast, setContrast] = useState(100);
   const [saturation, setSaturation] = useState(100);
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
 
   const { toast } = useToast();
   const editorRef = useRef<HTMLDivElement>(null);
@@ -413,6 +414,7 @@ export default function VisionaryCaptureClient() {
         link.download = 'visionary-capture.png';
         link.href = dataUrl;
         link.click();
+        setIsSheetOpen(false);
       })
       .catch((err) => {
         console.error(err);
@@ -438,13 +440,29 @@ export default function VisionaryCaptureClient() {
   const handlers = { handleDownload };
 
   return (
-    <div className="min-h-screen w-full flex flex-col md:flex-row bg-background text-foreground font-sans">
-      <ControlPanel state={state} setters={setters} handlers={handlers} />
-      <main className="flex-1 flex items-center justify-center p-4 md:p-8 bg-grid-pattern overflow-auto">
+    <div className="min-h-screen w-full flex bg-background text-foreground font-sans">
+      {/* Desktop Sidebar */}
+      <aside className="hidden md:flex md:w-80 lg:w-96 md:flex-shrink-0">
+        <ControlPanel state={state} setters={setters} handlers={handlers} />
+      </aside>
+
+      <main className="flex-1 flex items-center justify-center p-4 md:p-8 bg-grid-pattern overflow-auto relative">
+        <div className="md:hidden absolute top-4 left-4 z-10">
+          <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+            <SheetTrigger asChild>
+              <Button variant="outline" size="icon">
+                <Menu className="h-5 w-5" />
+                <span className="sr-only">Open Controls</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="p-0 w-[85vw] max-w-sm">
+                <ControlPanel state={state} setters={setters} handlers={handlers} />
+            </SheetContent>
+          </Sheet>
+        </div>
+        
         <CodePreview ref={editorRef} {...state} setCode={setCode} />
       </main>
     </div>
   );
 }
-
-    
