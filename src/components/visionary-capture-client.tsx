@@ -29,7 +29,7 @@ import 'prismjs/components/prism-yaml';
 
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { Brush, Download, Image as ImageIcon, Loader2, Settings, Menu } from "lucide-react";
+import { Brush, Download, Image as ImageIcon, Loader2, Settings, Menu, Aperture } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -87,6 +87,19 @@ const languagesList: {value: Language, label: string}[] = [
     { value: 'markdown', label: 'Markdown' },
 ];
 
+function Logo() {
+  return (
+    <>
+      <div className="flex items-center justify-center text-2xl font-bold font-headline text-foreground">
+        <span>Visi</span>
+        <Aperture className="mx-0.5 h-6 w-6" />
+        <span>nary</span>
+      </div>
+      <div className="text-center text-xs font-medium tracking-[0.2em] text-muted-foreground mt-1">CAPTURE</div>
+    </>
+  );
+}
+
 // ControlPanel Component
 interface ControlPanelProps {
   state: any;
@@ -103,10 +116,7 @@ function ControlPanel({ state, setters, handlers }: ControlPanelProps) {
   return (
     <aside className="w-full h-full bg-card border-r flex flex-col">
       <div className="p-4 border-b">
-        <h1 className="text-xl font-bold font-headline">Visionary Capture</h1>
-        <p className="text-sm text-muted-foreground">
-          Create beautiful code screenshots.
-        </p>
+        <Logo />
       </div>
       <div className="flex-1 overflow-y-auto">
         <Accordion type="multiple" defaultValue={["style", "settings"]} className="w-full">
